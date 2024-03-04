@@ -1,30 +1,21 @@
-from datas.data import OKX_KEYS, CEX_KEYS, DATA
-from config import STR_DONE, STR_CANCEL
+import random
+import hmac
+import base64
+import asyncio
+import datetime
+
+from loguru import logger
+import aiohttp
+import ccxt.async_support as ccxt
+
+from data import OKX_KEYS, CEX_KEYS
 from setting import Value_Exchange, Value_OKX, RETRY
 from .utils.helpers import list_send, async_sleeping, round_to
 
-from loguru import logger
-import random, hmac, base64
-import asyncio, aiohttp
-import ccxt.async_support as ccxt
-import datetime
-from web3 import Web3
-
-def get_address(key, is_private_key):
-    if is_private_key:
-        web3 = Web3(Web3.HTTPProvider(DATA["ethereum"]["rpc"]))
-        try:
-            address = web3.eth.account.from_key(key).address
-        except Exception as error:
-            logger.error(error)
-            return ''
-    else:
-        address = key
-    return address
 
 class OkxWithdraw:
 
-    def __init__(self, key, params=None):
+    def __init__(self, address, params=None):
         self.params = params
         if self.params:
             self.chain = self.params['chain']
@@ -34,7 +25,6 @@ class OkxWithdraw:
             self.account = self.params['account']
             self.fee = self.params['fee']
             self.sub_acc = self.params['sub_acc']
-            self.is_private_key = self.params['is_private_key']
 
         else:
             self.chain = Value_OKX.chain
@@ -44,10 +34,10 @@ class OkxWithdraw:
             self.account = Value_OKX.account
             self.fee = Value_OKX.fee
             self.sub_acc = Value_OKX.sub_acc
-            self.is_private_key = Value_OKX.is_private_key
 
-        self.address = get_address(key, self.is_private_key)
-        self.amount = round(random.uniform(self.amount_from, self.amount_to), 7)
+        self.address = address
+        self.amount = round(random.uniform(
+            self.amount_from, self.amount_to), 7)
         self.api_key = OKX_KEYS[self.account]['api_key']
         self.api_secret = OKX_KEYS[self.account]['api_secret']
         self.passphras = OKX_KEYS[self.account]['password']
@@ -56,16 +46,16 @@ class OkxWithdraw:
     async def make_http_request(self, url, method="GET", headers=None, params=None, data=None, timeout=10):
         async with aiohttp.ClientSession() as session:
             kwargs = {"url": url, "method": method, "timeout": timeout}
-            
+
             if headers:
                 kwargs["headers"] = headers
-            
+
             if params:
                 kwargs["params"] = params
-            
+
             if data:
                 kwargs["data"] = data
-            
+
             async with session.request(**kwargs) as response:
                 return await response.json()
 
@@ -114,11 +104,13 @@ class OkxWithdraw:
                 sub_balance = await self.make_http_request(f"https://www.okx.cab/api/v5/asset/subaccount/balances?subAcct={name_sub}&ccy={self.symbol}", headers=headers)
                 sub_balance = sub_balance['data'][0]['bal']
 
-                logger.info(f'{name_sub} | sub_balance : {sub_balance} {self.symbol}')
+                logger.info(
+                    f'{name_sub} | sub_balance : {sub_balance} {self.symbol}')
 
-                body = {"ccy": f"{self.symbol}", "amt": str(sub_balance), "from": 6, "to": 6, "type": "2", "subAcct": name_sub}
+                body = {"ccy": f"{self.symbol}", "amt": str(
+                    sub_balance), "from": 6, "to": 6, "type": "2", "subAcct": name_sub}
                 headers = await self.get_data(request_path=f"/api/v5/asset/transfer", body=str(body), meth="POST")
-                transfer = await self.make_http_request("https://www.okx.cab/api/v5/asset/transfer",data=str(body), method="POST", headers=headers)
+                transfer = await self.make_http_request("https://www.okx.cab/api/v5/asset/transfer", data=str(body), method="POST", headers=headers)
                 await asyncio.sleep(1)
 
         except Exception as error:
@@ -132,9 +124,10 @@ class OkxWithdraw:
             balance = balance["data"][0]["details"][0]["cashBal"]
 
             if balance != 0:
-                body = {"ccy": f"{self.symbol}", "amt": float(balance), "from": 18, "to": 6, "type": "0", "subAcct": "", "clientId": "", "loanTrans": "", "omitPosRisk": ""}
+                body = {"ccy": f"{self.symbol}", "amt": float(
+                    balance), "from": 18, "to": 6, "type": "0", "subAcct": "", "clientId": "", "loanTrans": "", "omitPosRisk": ""}
                 headers = await self.get_data(request_path=f"/api/v5/asset/transfer", body=str(body), meth="POST")
-                transfer = await self.make_http_request("https://www.okx.cab/api/v5/asset/transfer",data=str(body), method="POST", headers=headers)
+                transfer = await self.make_http_request("https://www.okx.cab/api/v5/asset/transfer", data=str(body), method="POST", headers=headers)
         except Exception as ex:
             pass
 
@@ -146,21 +139,25 @@ class OkxWithdraw:
             return await self.withdraw(retry + 1)
 
         try:
-            body = {"ccy":self.symbol, "amt":self.amount, "fee":self.fee, "dest":"4", "chain":f"{self.symbol}-{self.chain}", "toAddr":self.address}
+            body = {"ccy": self.symbol, "amt": self.amount, "fee": self.fee, "dest": "4",
+                    "chain": f"{self.symbol}-{self.chain}", "toAddr": self.address}
             headers = await self.get_data(request_path=f"/api/v5/asset/withdrawal", meth="POST", body=str(body))
-            result = await self.make_http_request("https://www.okx.cab/api/v5/asset/withdrawal",data=str(body), method="POST", headers=headers)
+            result = await self.make_http_request("https://www.okx.cab/api/v5/asset/withdrawal", data=str(body), method="POST", headers=headers)
 
             if result['code'] == '0':
-                logger.success(f"withdraw success => {self.address} | {self.amount} {self.symbol}")
-                list_send.append(f'{STR_DONE}{self.module_str} ')
+                logger.success(
+                    f"withdraw success => {self.address} | {self.amount} {self.symbol}")
+                list_send.append(f'{self.module_str} ')
                 return True
             else:
                 error = result['msg']
-                logger.error(f"withdraw unsuccess => {self.address} | error : {error}")
+                logger.error(
+                    f"withdraw unsuccess => {self.address} | error : {error}")
                 if retry < RETRY:
                     return await retry_attempt()
                 else:
-                    list_send.append(f"{STR_CANCEL}{self.module_str} :  {result['msg']}")
+                    list_send.append(
+                        f"{self.module_str} :  {result['msg']}")
                     return False
 
         except Exception as error:
@@ -168,7 +165,8 @@ class OkxWithdraw:
             if retry < RETRY:
                 return await retry_attempt()
             else:
-                list_send.append(f'{STR_CANCEL}{self.module_str} | error : {error}')
+                list_send.append(
+                    f'{self.module_str} | error : {error}')
                 return False
 
     async def start(self):
@@ -178,9 +176,10 @@ class OkxWithdraw:
         await self.transfer_spot_to_funding()
         return await self.withdraw()
 
+
 class ExchangeWithdraw:
 
-    def __init__(self, key, params=None):
+    def __init__(self, address, params=None):
         self.params = params
         if self.params:
             self.chain = self.params['chain']
@@ -188,7 +187,6 @@ class ExchangeWithdraw:
             self.amount_from = self.params['amount_from']
             self.amount_to = self.params['amount_to']
             self.exchange = self.params['exchange']
-            self.is_private_key = self.params['is_private_key']
             self.account = self.params['account']
         else:
             self.chain = Value_Exchange.chain
@@ -196,11 +194,11 @@ class ExchangeWithdraw:
             self.amount_from = Value_Exchange.amount_from
             self.amount_to = Value_Exchange.amount_to
             self.exchange = Value_Exchange.exchange
-            self.is_private_key = Value_Exchange.is_private_key
             self.account = Value_Exchange.account
 
-        self.address = get_address(key, self.is_private_key)
-        self.amount = round(random.uniform(self.amount_from, self.amount_to), 7)
+        self.address = address
+        self.amount = round(random.uniform(
+            self.amount_from, self.amount_to), 7)
         self.api_key = CEX_KEYS[self.exchange]['api_key']
         self.api_secret = CEX_KEYS[self.exchange]['api_secret']
         self.module_str = f"{self.exchange}_withdraw : {round_to(self.amount)} {self.symbol} ({self.chain}) => {self.address}"
@@ -237,25 +235,27 @@ class ExchangeWithdraw:
         try:
 
             await account.withdraw(
-                code = self.symbol,
-                amount = self.amount,
-                address = self.address,
-                tag = None, 
-                params = params
+                code=self.symbol,
+                amount=self.amount,
+                address=self.address,
+                tag=None,
+                params=params
             )
-            logger.success(f"{self.exchange}_withdraw success => {self.address} | {self.amount} {self.symbol}")
-            list_send.append(f'{STR_DONE}{self.module_str}')
+            logger.success(
+                f"{self.exchange}_withdraw success => {self.address} | {self.amount} {self.symbol}")
+            list_send.append(f'{self.module_str}')
             await account.close()
 
             return True
-    
+
         except Exception as error:
             await account.close()
             logger.error(f"{self.module_str} | error : {error}")
             if retry < RETRY:
                 return await retry_attempt()
             else:
-                list_send.append(f'{STR_CANCEL}{self.module_str} | error : {error}')
+                list_send.append(
+                    f'{self.module_str} | error : {error}')
                 return False
 
     async def start(self):
