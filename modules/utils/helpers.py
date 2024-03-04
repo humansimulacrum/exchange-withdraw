@@ -4,7 +4,6 @@ import math
 
 from tqdm import tqdm
 
-
 list_send = []
 
 

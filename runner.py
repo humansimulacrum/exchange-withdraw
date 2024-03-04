@@ -9,7 +9,7 @@ from modules.utils.files import read_txt
 from modules.exchange_withdraw import ExchangeWithdraw, OkxWithdraw
 
 
-WALLETS = read_txt("datas/wallets.txt")
+WALLETS = read_txt("wallets.txt")
 
 
 MODULES = {

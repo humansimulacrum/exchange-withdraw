@@ -1,10 +1,4 @@
-# Get your API key from 0x here: https://dashboard.0x.org/apps
-API_0x = 'your_0x_api_key'
-# Get your API key from 1inch here: https://portal.1inch.dev/login
-API_1inch = 'your_0x_api_key'
-
-
-# API keys for exchanges. You can skip this if you don't use exchanges.
+# API keys for exchanges.
 CEX_KEYS = {
     'binance': {'api_key': 'your_api_key', 'api_secret': 'your_api_secret'},
     'mexc': {'api_key': 'your_api_key', 'api_secret': 'your_api_secret'},
