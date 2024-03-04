@@ -13,16 +13,15 @@ WALLETS = read_txt("wallets.txt")
 
 
 MODULES = {
-    1: ("exchange_withdraw", ExchangeWithdraw),
-    2: ("okx_withdraw", OkxWithdraw)
+    1: ExchangeWithdraw,
+    2: OkxWithdraw
 }
 
 
 def get_module(module):
     module_info = MODULES.get(module)
     if module_info:
-        module_name, func = module_info
-        return func, module_name
+        return module_info
     else:
         raise ValueError(f"Unsupported module: {module}")
 

@@ -1,6 +1,6 @@
 # --- Settings ---
 IS_SLEEP = True         # Enable/disable delay between wallets
-DELAY_SLEEP = [30, 60]  # Delay range between wallets (seconds)
+DELAY_SLEEP = [120, 240]  # Delay range between wallets (seconds)
 RETRY = 0               # Number of retries on errors/failures
 
 
@@ -30,9 +30,6 @@ class Value_Exchange:
     amount_from = 1.5  # Withdrawal from a certain amount of coins
     amount_to = 2.2  # Withdrawal up to a certain amount of coins
 
-    # Set to True if you have inserted EVM private keys in wallets.txt. Set to False if you have addresses (EVM / non-EVM).
-    is_private_key = False
-
     account = "spot"  # spot | funding
 
 
@@ -51,18 +48,16 @@ class Value_OKX:
     Fantom
     zkSync Era
     StarkNet
+    Linea
     '''
 
-    chain = 'CORE'
-    symbol = 'CORE'
+    chain = 'Linea'
+    symbol = 'ETH'
 
-    amount_from = 0.7
-    amount_to = 1
+    amount_from = 0.004
+    amount_to = 0.007
 
-    account = 'account_1'
+    account = 'withdraw'
 
-    fee = 0.001  # Withdrawal fee
+    fee = 0.0002  # Withdrawal fee
     sub_acc = False  # True / False. True if you want to check sub-accounts and first transfer from them to the main account
-
-    # Set to True if you have inserted EVM private keys in wallets.txt. Set to False if you have addresses (EVM / non-EVM).
-    is_private_key = False
